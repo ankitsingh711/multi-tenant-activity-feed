@@ -26,9 +26,6 @@ export async function GET(
     const auth = await authenticate(req);
 
     const result = await withOrgContext(auth.orgId, async (client) => {
-      // RLS scopes this to auth.orgId. A cross-tenant accountId simply
-      // matches zero rows here — same response shape as "doesn't exist",
-      // which avoids confirming another org's account IDs to the caller.
       const account = await client.query<{ id: string; name: string }>(
         "select id, name from accounts where id = $1",
         [accountId]
