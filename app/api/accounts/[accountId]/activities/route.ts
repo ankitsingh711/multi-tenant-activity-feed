@@ -13,7 +13,6 @@ type ActivityEntry = {
   created_at: string;
 };
 
-// GET /api/accounts/:accountId/activities — list entries, newest first.
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ accountId: string }> }
@@ -61,8 +60,6 @@ export async function GET(
   }
 }
 
-// POST /api/accounts/:accountId/activities — add a note, idempotent by
-// request (Idempotency-Key header).
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ accountId: string }> }
@@ -97,16 +94,11 @@ export async function POST(
     const auth = await authenticate(req);
 
     const result = await withOrgContext(auth.orgId, async (client) => {
-      // Same RLS-backed existence check as GET: writing to an account we
-      // can't see must fail exactly like writing to one that doesn't exist.
       const account = await client.query("select id from accounts where id = $1", [
         accountId,
       ]);
       if (account.rowCount === 0) return { notFound: true as const };
 
-      // org_id is taken from server-verified auth, never from the client,
-      // so a caller cannot forge writes into another org even if accountId
-      // somehow matched (it can't, per the check above + RLS).
       const insert = await client.query<ActivityEntry>(
         `insert into activity_entries (account_id, org_id, body, created_by, idempotency_key)
          values ($1, $2, $3, $4, $5)
@@ -119,9 +111,6 @@ export async function POST(
         return { notFound: false as const, entry: insert.rows[0], replayed: false };
       }
 
-      // Conflict: this exact (account, idempotency key) pair already
-      // exists. Return the original entry instead of erroring, so retries
-      // are safe and observably return the same result.
       const existing = await client.query<ActivityEntry>(
         `select id, body, created_by, created_at
            from activity_entries

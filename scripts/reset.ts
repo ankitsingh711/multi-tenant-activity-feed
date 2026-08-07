@@ -1,5 +1,3 @@
-// Drops all app objects and re-applies migrations, so tests and local dev
-// start from a known, deterministic state.
 import { Client } from "pg";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -9,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const adminUrl =
   process.env.ADMIN_DATABASE_URL ||
-  "postgres://postgres:postgres@localhost:5433/activity_feed";
+  "postgres://postgres:postgres@localhost:5434/activity_feed";
 
 async function main() {
   const client = new Client({ connectionString: adminUrl });

@@ -1,13 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 
-// These tests exercise the real HTTP surface of the running Next.js app
-// (see scripts/test-integration.sh, which resets the DB, builds, starts the
-// server, then runs this file). They are integration tests by design: the
-// property under test — Row Level Security enforcement — only holds when
-// requests go through the actual Postgres connection with RLS policies
-// active, which a mocked DB layer would not prove.
-
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4300";
 
 const ALICE = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"; // Acme Corp
@@ -28,7 +21,6 @@ async function json(res: Response) {
 
 describe("account activity feed", () => {
   beforeAll(async () => {
-    // Sanity: server is reachable before running the suite.
     const res = await fetch(`${BASE_URL}/api/accounts`, authed(ALICE));
     if (!res.ok) {
       throw new Error(
@@ -123,8 +115,6 @@ describe("account activity feed", () => {
     const firstBody = await json(first);
     expect(firstBody.replayed).toBe(false);
 
-    // Simulate a client retry (e.g. after a dropped response) with the
-    // identical Idempotency-Key and body.
     const retry = await fetch(
       `${BASE_URL}/api/accounts/${ACME_ACCOUNT}/activities`,
       authed(ALICE, payload)

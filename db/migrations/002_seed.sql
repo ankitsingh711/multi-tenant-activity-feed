@@ -1,6 +1,3 @@
--- Deterministic seed data for local dev/testing.
--- Two orgs, one account each, one user each, membership binding user->org.
-
 insert into organizations (id, name) values
   ('11111111-1111-1111-1111-111111111111', 'Acme Corp'),
   ('22222222-2222-2222-2222-222222222222', 'Globex Inc');

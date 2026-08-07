@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   Account,
   ActivityEntry,
@@ -19,6 +19,31 @@ type FeedState =
 
 export default function Home() {
   const [token, setToken] = useState<string>(SEED_IDENTITIES[0].token);
+
+  return (
+    <main style={{ maxWidth: 720, margin: "0 auto", padding: "2rem 1rem", fontFamily: "system-ui, sans-serif" }}>
+      <h1 style={{ fontSize: "1.5rem" }}>Account Activity Feed</h1>
+      <p style={{ color: "#555", fontSize: "0.9rem" }}>
+        Secure multi-tenant demo. Switch identity below to see tenant isolation enforced
+        server-side (via Postgres RLS) — not just hidden in the UI.
+      </p>
+
+      <label style={{ display: "block", fontWeight: 600, marginTop: "1.5rem", marginBottom: 4 }}>
+        Simulated identity
+      </label>
+      <select value={token} onChange={(e) => setToken(e.target.value)}>
+        {SEED_IDENTITIES.map((id) => (
+          <option key={id.token} value={id.token}>
+            {id.label}
+          </option>
+        ))}
+      </select>
+      <AccountWorkspace key={token} token={token} />
+    </main>
+  );
+}
+
+function AccountWorkspace({ token }: { token: string }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountsError, setAccountsError] = useState<string | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
@@ -28,16 +53,20 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [submitNote, setSubmitNote] = useState<string | null>(null);
 
-  // Load the account picker whenever the simulated identity changes.
   useEffect(() => {
-    setAccountsError(null);
-    setSelectedAccountId("");
-    setFeed({ status: "idle" });
+    let cancelled = false;
     listAccounts(token)
-      .then((res) => setAccounts(res.data))
-      .catch((err) =>
-        setAccountsError(err instanceof ApiError ? err.message : "Failed to load accounts")
-      );
+      .then((res) => {
+        if (!cancelled) setAccounts(res.data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setAccountsError(err instanceof ApiError ? err.message : "Failed to load accounts");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   function openAccount(accountId: string) {
@@ -57,16 +86,12 @@ export default function Home() {
       );
   }
 
-  // Stable per compose-session idempotency key so a double-click or network
-  // retry of the *same* note never creates a duplicate entry. Regenerated
-  // once the note is successfully submitted or the textarea is cleared.
-  const idempotencyKey = useMemo(() => crypto.randomUUID(), [selectedAccountId, submitNote]);
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!selectedAccountId || !noteText.trim() || submitting) return;
     setSubmitting(true);
     setSubmitNote(null);
+    const idempotencyKey = crypto.randomUUID();
     try {
       const res = await createActivity(token, selectedAccountId, noteText.trim(), idempotencyKey);
       setNoteText("");
@@ -80,28 +105,11 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "2rem 1rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1 style={{ fontSize: "1.5rem" }}>Account Activity Feed</h1>
-      <p style={{ color: "#555", fontSize: "0.9rem" }}>
-        Secure multi-tenant demo. Switch identity below to see tenant isolation enforced
-        server-side (via Postgres RLS) — not just hidden in the UI.
-      </p>
-
+    <>
       <section style={{ marginTop: "1.5rem", padding: "1rem", border: "1px solid #ddd", borderRadius: 8 }}>
-        <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
-          Simulated identity
-        </label>
-        <select value={token} onChange={(e) => setToken(e.target.value)}>
-          {SEED_IDENTITIES.map((id) => (
-            <option key={id.token} value={id.token}>
-              {id.label}
-            </option>
-          ))}
-        </select>
-
         {accountsError && <p style={{ color: "#b00020" }}>Error: {accountsError}</p>}
 
-        <div style={{ marginTop: "0.75rem" }}>
+        <div>
           <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
             Your accounts
           </label>
@@ -183,6 +191,6 @@ export default function Home() {
           </div>
         )}
       </section>
-    </main>
+    </>
   );
 }

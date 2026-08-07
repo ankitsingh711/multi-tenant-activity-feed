@@ -6,11 +6,9 @@ import { Client } from "pg";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(__dirname, "..", "db", "migrations");
 
-// Runs as the DB owner (postgres) because 001_init.sql creates the
-// least-privilege `app_user` role that the application itself connects as.
 const adminUrl =
   process.env.ADMIN_DATABASE_URL ||
-  "postgres://postgres:postgres@localhost:5433/activity_feed";
+  "postgres://postgres:postgres@localhost:5434/activity_feed";
 
 async function main() {
   const client = new Client({ connectionString: adminUrl });
